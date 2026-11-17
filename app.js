@@ -1,7 +1,7 @@
 // Wartungsplaner – Anlagen, Wartungsintervalle, Störmeldungen und QR-Codes
 // Daten liegen im localStorage des Browsers (keine Server nötig).
 
-const SPEICHER = 'wartungsplaner-v1';
+const SPEICHER = 'wartungsplaner-v2';
 const BALD_TAGE = 14; // ab wie vielen Tagen vor Fälligkeit "bald fällig"
 
 // ---------- Demo-Daten ----------
@@ -12,23 +12,23 @@ function tageZurueck(n) {
 function demoDaten() {
   return {
     anlagen: [
-      { id: 'A-001', name: 'Förderband 3', ort: 'Halle 2, Linie A', typ: 'Bandförderer', intervall: 90, letzte: tageZurueck(97),
-        checkliste: ['Antriebskette schmieren', 'Gurtspannung und Gurtlauf prüfen', 'Rollen auf Verschleiß prüfen', 'Not-Aus-Funktion testen'] },
-      { id: 'A-002', name: 'Druckluftkompressor K1', ort: 'Technikraum', typ: 'Schraubenkompressor', intervall: 180, letzte: tageZurueck(170),
-        checkliste: ['Ölstand prüfen', 'Ansaugfilter wechseln', 'Kondensatableiter prüfen', 'Sicherheitsventil testen'] },
-      { id: 'A-003', name: 'Hebebühne HB-2', ort: 'Werkstatt', typ: 'Säulenhebebühne', intervall: 365, letzte: tageZurueck(40),
-        checkliste: ['Tragmuttern auf Verschleiß prüfen', 'Hydraulik auf Dichtheit prüfen', 'Endschalter testen', 'Sachkundigenprüfung dokumentieren'] },
-      { id: 'A-004', name: 'Lastenaufzug LA-1', ort: 'Lager, Achse 4', typ: 'Seilaufzug', intervall: 30, letzte: tageZurueck(31),
-        checkliste: ['Türkontakte prüfen', 'Notruf testen', 'Bremse und Halt prüfen', 'Schacht und Fahrkorb Sichtprüfung'] },
-      { id: 'A-005', name: 'Rolltor RT-5', ort: 'Laderampe 2', typ: 'Schnelllauftor', intervall: 180, letzte: tageZurueck(60),
-        checkliste: ['Lichtschranke prüfen', 'Schließkantensicherung testen', 'Federn und Seile Sichtprüfung'] },
+      { id: 'A-001', name: 'Motor 1', ort: 'Halle 1', typ: 'Drehstrommotor', intervall: 90, letzte: tageZurueck(97),
+        checkliste: ['Lager auf Geräusche prüfen', 'Temperatur im Betrieb messen', 'Anschlussklemmen nachziehen', 'Isolationswiderstand messen'] },
+      { id: 'A-002', name: 'Frequenzumrichter 2', ort: 'Schaltschrank 2', typ: 'Frequenzumrichter', intervall: 180, letzte: tageZurueck(172),
+        checkliste: ['Lüfter und Kühlkörper reinigen', 'Fehlerspeicher auslesen', 'Anschlüsse auf festen Sitz prüfen'] },
+      { id: 'A-003', name: 'Pumpe 1', ort: 'Halle 1', typ: 'Kreiselpumpe', intervall: 90, letzte: tageZurueck(30),
+        checkliste: ['Dichtung auf Leckage prüfen', 'Druck und Durchfluss kontrollieren', 'Lagergeräusche prüfen'] },
+      { id: 'A-004', name: 'Kompressor 1', ort: 'Technikraum', typ: 'Druckluftkompressor', intervall: 180, letzte: tageZurueck(60),
+        checkliste: ['Ölstand prüfen', 'Luftfilter wechseln', 'Kondensat ablassen', 'Sicherheitsventil testen'] },
+      { id: 'A-005', name: 'Förderband 1', ort: 'Halle 2', typ: 'Förderband', intervall: 30, letzte: tageZurueck(31),
+        checkliste: ['Antriebskette schmieren', 'Bandspannung prüfen', 'Not-Aus testen'] },
     ],
     historie: [
-      { anlage: 'A-003', datum: tageZurueck(40), art: 'Wartung', text: 'Jahreswartung durchgeführt, Tragmuttern i. O.', wer: 'T. Hauser' },
-      { anlage: 'A-001', datum: tageZurueck(20), art: 'Störung', text: 'Band läuft seitlich ab – Gurt nachgestellt', wer: 'T. Hauser', erledigt: true },
+      { anlage: 'A-003', datum: tageZurueck(30), art: 'Wartung', text: 'Wartung nach Checkliste, alles i. O.', wer: 'T. Hauser' },
+      { anlage: 'A-001', datum: tageZurueck(20), art: 'Störung', text: 'Motor sehr laut – Lager getauscht', wer: 'T. Hauser' },
     ],
     stoerungen: [
-      { id: 1, anlage: 'A-004', datum: tageZurueck(2), text: 'Tür schließt nur nach mehreren Versuchen', prio: 'hoch', offen: true },
+      { id: 1, anlage: 'A-002', datum: tageZurueck(2), text: 'Fehlermeldung Überstrom, Antrieb schaltet ab', prio: 'hoch', offen: true },
     ],
   };
 }
@@ -121,6 +121,7 @@ function renderDetail(id) {
         <button class="primaer" id="btnWartung">Wartung erledigt</button>
         <button class="warn" id="btnStoerung">Störung melden</button>
         <button class="sekundaer" id="btnDruck">QR-Etikett drucken</button>
+        <button class="sekundaer" id="btnLoeschen">Anlage löschen</button>
       </div>
       <div id="formBereich"></div>
     </div>
@@ -138,7 +139,26 @@ function renderDetail(id) {
   document.getElementById('btnDruck').onclick = () => window.print();
   document.getElementById('btnWartung').onclick = () => formWartung(a);
   document.getElementById('btnStoerung').onclick = () => formStoerung(a);
+  document.getElementById('btnLoeschen').onclick = () => formLoeschen(a);
   bindStoerButtons();
+}
+
+function formLoeschen(a) {
+  document.getElementById('formBereich').innerHTML = `
+    <div class="karte loeschen">
+      <p><b>${esc(a.name)}</b> wirklich löschen? Wartungshistorie und Störungen dieser Anlage werden ebenfalls entfernt.</p>
+      <div class="aktionen">
+        <button class="warn" id="jaLoeschen">Ja, löschen</button>
+        <button class="sekundaer" id="neinLoeschen">Abbrechen</button>
+      </div>
+    </div>`;
+  document.getElementById('neinLoeschen').onclick = () => { document.getElementById('formBereich').innerHTML = ''; };
+  document.getElementById('jaLoeschen').onclick = () => {
+    daten.anlagen = daten.anlagen.filter((x) => x.id !== a.id);
+    daten.historie = daten.historie.filter((h) => h.anlage !== a.id);
+    daten.stoerungen = daten.stoerungen.filter((s) => s.anlage !== a.id);
+    speichern(); location.hash = '';
+  };
 }
 
 function stoerKarte(s) {
@@ -210,7 +230,8 @@ function renderStoerungen() {
 document.getElementById('formNeu').addEventListener('submit', (e) => {
   e.preventDefault();
   const f = new FormData(e.target);
-  const nr = String(daten.anlagen.length + 1).padStart(3, '0');
+  const max = daten.anlagen.reduce((m, x) => Math.max(m, parseInt(x.id.slice(2), 10) || 0), 0);
+  const nr = String(max + 1).padStart(3, '0');
   const id = 'A-' + nr;
   daten.anlagen.push({
     id, name: f.get('name'), ort: f.get('ort'), typ: f.get('typ'), intervall: Number(f.get('intervall')), letzte: f.get('letzte'),

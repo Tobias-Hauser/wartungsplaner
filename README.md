@@ -34,6 +34,7 @@ Jede Anlage bekommt einen **QR-Aufkleber**. Wer ihn mit dem Handy scannt, sieht 
 | Checkliste | Wartung kann erst gespeichert werden, wenn alle Punkte abgehakt sind |
 | Störmeldungen | Melden, priorisieren und mit durchgeführter Maßnahme abschließen |
 | QR-Etiketten | Pro Anlage ein QR-Code zum Ausdrucken und Aufkleben |
+| Anlagen verwalten | Neue Anlagen anlegen und nicht mehr benötigte löschen (mit Sicherheitsabfrage) |
 | Suche & Filter | Nach Anlage, Standort oder Status |
 | Mobil | Funktioniert auf Handy, Tablet und PC |
 

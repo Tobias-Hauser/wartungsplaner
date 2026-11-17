@@ -43,6 +43,7 @@ h2 { font-size: 1.2rem; }
 .detail-kopf { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .qr { background: #fff; padding: 10px; border-radius: 8px; display: inline-block; }
 .qr-label { text-align: center; color: var(--grau); font-size: .8rem; margin-top: 4px; font-weight: 600; }
+.loeschen { border: 2px solid var(--faellig); margin-top: 8px; }
 .behoben { display: flex; gap: 8px; margin-top: 8px; }
 .behoben input { flex: 1; padding: 9px 10px; border: 1px solid var(--linie); border-radius: 8px; background: var(--bg); color: var(--text); }
 .aktionen { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
