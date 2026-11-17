@@ -1,0 +1,70 @@
+:root {
+  --bg: #f4f5f7; --karte: #fff; --text: #1d1d1f; --grau: #6b6f76; --linie: #e2e4e8;
+  --akzent: #a32a0b; --ok: #1f8a4c; --bald: #c98a00; --faellig: #c62828;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #141518; --karte: #1e2024; --text: #eceef1; --grau: #9aa0a8; --linie: #2e3137; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+header { background: var(--akzent); color: #fff; padding: 18px 0; }
+.kopf { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+h1 { margin: 0; font-size: 1.6rem; }
+.sub { margin: 4px 0 0; opacity: .85; font-size: .9rem; }
+nav { display: flex; gap: 6px; }
+nav button { background: rgba(255,255,255,.15); color: #fff; border: 0; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: .95rem; }
+nav button.aktiv { background: #fff; color: var(--akzent); font-weight: 600; }
+main { padding-top: 20px; padding-bottom: 20px; }
+h2 { font-size: 1.2rem; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+.kpi { background: var(--karte); border-radius: 10px; padding: 12px 14px; border-left: 4px solid var(--linie); }
+.kpi b { display: block; font-size: 1.6rem; }
+.kpi span { color: var(--grau); font-size: .85rem; }
+.kpi.faellig { border-color: var(--faellig); } .kpi.bald { border-color: var(--bald); }
+.kpi.ok { border-color: var(--ok); } .kpi.stoer { border-color: var(--akzent); }
+
+.filter { display: flex; gap: 8px; margin-bottom: 12px; }
+.filter input, .filter select { padding: 9px 10px; border: 1px solid var(--linie); border-radius: 8px; background: var(--karte); color: var(--text); font-size: .95rem; }
+.filter input { flex: 1; }
+
+.liste { display: grid; gap: 10px; }
+.karte { background: var(--karte); border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.anlage { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; cursor: pointer; border-left: 5px solid var(--linie); }
+.anlage:hover { outline: 2px solid var(--linie); }
+.anlage.faellig { border-left-color: var(--faellig); } .anlage.bald { border-left-color: var(--bald); } .anlage.ok { border-left-color: var(--ok); }
+.anlage h3 { margin: 0; font-size: 1.05rem; }
+.meta { color: var(--grau); font-size: .88rem; }
+.badge { align-self: start; padding: 3px 9px; border-radius: 99px; font-size: .8rem; font-weight: 600; color: #fff; white-space: nowrap; }
+.badge.faellig { background: var(--faellig); } .badge.bald { background: var(--bald); } .badge.ok { background: var(--ok); }
+.badge.stoer { background: var(--akzent); }
+
+.detail-kopf { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.qr { background: #fff; padding: 10px; border-radius: 8px; display: inline-block; }
+.qr-label { text-align: center; color: var(--grau); font-size: .8rem; margin-top: 4px; font-weight: 600; }
+.behoben { display: flex; gap: 8px; margin-top: 8px; }
+.behoben input { flex: 1; padding: 9px 10px; border: 1px solid var(--linie); border-radius: 8px; background: var(--bg); color: var(--text); }
+.aktionen { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+button.primaer, button.sekundaer, button.warn { border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-size: .95rem; }
+button.primaer { background: var(--akzent); color: #fff; }
+button.sekundaer { background: var(--linie); color: var(--text); }
+button.warn { background: var(--faellig); color: #fff; }
+button.link { background: none; border: 0; color: var(--akzent); cursor: pointer; text-decoration: underline; padding: 0; }
+.check label { display: flex; gap: 8px; padding: 4px 0; }
+.historie { list-style: none; padding: 0; margin: 0; }
+.historie li { padding: 8px 0; border-bottom: 1px solid var(--linie); font-size: .92rem; }
+.historie li:last-child { border-bottom: 0; }
+.formular { display: grid; gap: 12px; max-width: 520px; }
+.formular label { display: grid; gap: 4px; font-size: .9rem; color: var(--grau); }
+.formular input, .formular textarea, .formular select { padding: 9px 10px; border: 1px solid var(--linie); border-radius: 8px; background: var(--bg); color: var(--text); font-size: .95rem; font-family: inherit; }
+footer { color: var(--grau); font-size: .85rem; padding-bottom: 30px; }
+
+@media (max-width: 640px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .filter { flex-direction: column; }
+}
+@media print {
+  header, nav, .aktionen, footer, .nicht-drucken { display: none !important; }
+  body { background: #fff; }
+}

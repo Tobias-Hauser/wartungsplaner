@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wartungsplaner</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="wrap kopf">
+    <div>
+      <h1>Wartungsplaner</h1>
+      <p class="sub">Anlagen · Wartungsintervalle · Störmeldungen · QR-Codes</p>
+    </div>
+    <nav>
+      <button data-view="uebersicht" class="aktiv">Übersicht</button>
+      <button data-view="stoerungen">Störungen</button>
+      <button data-view="neu">+ Anlage</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Übersicht -->
+  <section id="view-uebersicht">
+    <div class="kpis" id="kpis"></div>
+    <div class="filter">
+      <input id="suche" type="search" placeholder="Anlage oder Standort suchen …">
+      <select id="filterStatus">
+        <option value="">Alle</option>
+        <option value="faellig">Überfällig</option>
+        <option value="bald">Bald fällig</option>
+        <option value="ok">In Ordnung</option>
+      </select>
+    </div>
+    <div id="liste" class="liste"></div>
+  </section>
+
+  <!-- Anlage-Detail (auch Ziel der QR-Codes) -->
+  <section id="view-detail" hidden></section>
+
+  <!-- Störungen -->
+  <section id="view-stoerungen" hidden>
+    <h2>Offene Störungen</h2>
+    <div id="stoerListe"></div>
+  </section>
+
+  <!-- Neue Anlage -->
+  <section id="view-neu" hidden>
+    <h2>Neue Anlage anlegen</h2>
+    <form id="formNeu" class="karte formular">
+      <label>Bezeichnung<input name="name" required placeholder="z. B. Förderband 3"></label>
+      <label>Standort<input name="ort" required placeholder="z. B. Halle 2, Linie A"></label>
+      <label>Typ<input name="typ" placeholder="z. B. Bandförderer"></label>
+      <label>Wartungsintervall (Tage)<input name="intervall" type="number" min="1" value="90" required></label>
+      <label>Letzte Wartung<input name="letzte" type="date" required></label>
+      <label>Wartungsumfang (eine Zeile pro Punkt)<textarea name="checkliste" rows="4" placeholder="Antriebskette schmieren&#10;Gurtspannung prüfen&#10;Not-Aus testen"></textarea></label>
+      <button type="submit" class="primaer">Anlage speichern</button>
+    </form>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>Demo-Daten werden lokal im Browser gespeichert. <button id="reset" class="link">Demo zurücksetzen</button></p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
