@@ -73,6 +73,10 @@ def init_db():
                 id INTEGER PRIMARY KEY, anlage_id INTEGER NOT NULL REFERENCES anlagen(id) ON DELETE CASCADE,
                 datum TEXT NOT NULL, text TEXT NOT NULL, prio TEXT NOT NULL, offen INTEGER NOT NULL DEFAULT 1,
                 gemeldet_von TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS eingriffe (
+                id INTEGER PRIMARY KEY, anlage_id INTEGER NOT NULL REFERENCES anlagen(id) ON DELETE CASCADE,
+                start TEXT NOT NULL, grund TEXT NOT NULL, werkzeug TEXT NOT NULL DEFAULT '[]', von TEXT NOT NULL,
+                ende TEXT, freigabe_von TEXT, offen INTEGER NOT NULL DEFAULT 1);
             """
         )
 
@@ -180,7 +184,7 @@ def benutzer_aus_token(con, auth):
         (token_hash(auth[7:].strip()), datetime.utcnow().isoformat()),
     ).fetchone()
     if not r:
-        raise Fehler(401, "Sitzung abgelaufen – bitte neu anmelden")
+        raise Fehler(401, "Sitzung abgelaufen. Bitte neu anmelden.")
     return r
 
 
@@ -272,8 +276,20 @@ def api(methode, pfad, daten, auth, ip):
                 "SELECT s.* FROM stoerungen s JOIN anlagen a ON a.id = s.anlage_id WHERE a.firma_id = ? AND s.offen = 1 ORDER BY s.datum DESC",
                 (fid,),
             ).fetchall()
+            eingr = {
+                e["anlage_id"]: {"id": e["id"], "start": e["start"], "grund": e["grund"], "werkzeug": json.loads(e["werkzeug"]), "von": e["von"]}
+                for e in con.execute(
+                    "SELECT e.* FROM eingriffe e JOIN anlagen a ON a.id = e.anlage_id WHERE a.firma_id = ? AND e.offen = 1", (fid,)
+                ).fetchall()
+            }
+            anl = []
+            for a in anlagen:
+                j = anlage_json(a)
+                if a["id"] in eingr:
+                    j["eingriff"] = eingr[a["id"]]
+                anl.append(j)
             return 200, {
-                "anlagen": [anlage_json(a) for a in anlagen],
+                "anlagen": anl,
                 "historie": [{"anlage": nr_von[h["anlage_id"]], "datum": h["datum"], "art": h["art"], "text": h["text"], "wer": h["wer"]} for h in hist],
                 "stoerungen": [{"id": s["id"], "anlage": nr_von[s["anlage_id"]], "datum": s["datum"], "text": s["text"], "prio": s["prio"], "offen": True, "von": s["gemeldet_von"]} for s in stoer],
             }
@@ -309,6 +325,48 @@ def api(methode, pfad, daten, auth, ip):
                         (a["id"], heute(), "Wartung", text, b["name"]))
             return 200, {"ok": True}
 
+        # ---- Eingriff starten (Anlage geht in Instandhaltung, Werkzeug wird erfasst)
+        if len(teile) == 3 and teile[0] == "anlagen" and teile[2] == "eingriff" and methode == "POST":
+            a = anlage_holen(con, b, teile[1])
+            if con.execute("SELECT 1 FROM eingriffe WHERE anlage_id = ? AND offen = 1", (a["id"],)).fetchone():
+                raise Fehler(409, "An dieser Anlage läuft bereits ein Eingriff")
+            grund = text_feld(daten, "grund", 200)
+            werkzeug = [str(w).strip()[:80] for w in (daten.get("werkzeug") or []) if str(w).strip()][:40]
+            if not werkzeug:
+                raise Fehler(400, "Bitte mindestens ein Werkzeug oder Teil erfassen")
+            jetzt = datetime.now().strftime("%Y-%m-%d %H:%M")
+            con.execute("INSERT INTO eingriffe (anlage_id, start, grund, werkzeug, von) VALUES (?,?,?,?,?)",
+                        (a["id"], jetzt, grund, json.dumps(werkzeug, ensure_ascii=False), b["name"]))
+            return 201, {"ok": True}
+
+        # ---- Eingriff abschließen: Werkzeugkontrolle + Freigabe durch Produktion
+        if len(teile) == 4 and teile[0] == "anlagen" and teile[2] == "eingriff" and teile[3] == "abschluss" and methode == "POST":
+            a = anlage_holen(con, b, teile[1])
+            e = con.execute("SELECT * FROM eingriffe WHERE anlage_id = ? AND offen = 1", (a["id"],)).fetchone()
+            if not e:
+                raise Fehler(404, "Kein offener Eingriff an dieser Anlage")
+            werkzeug = json.loads(e["werkzeug"])
+            fehlend = [w for w in (daten.get("fehlend") or []) if w in werkzeug]
+            jetzt = datetime.now().strftime("%Y-%m-%d %H:%M")
+            if fehlend:
+                text = "Nach Instandhaltung fehlt: " + ", ".join(fehlend) + ". Anlage NICHT freigeben, Suche einleiten (Fremdkörpergefahr)."
+                con.execute("INSERT INTO stoerungen (anlage_id, datum, text, prio, gemeldet_von) VALUES (?,?,?,?,?)",
+                            (a["id"], heute(), text[:500], "hoch", b["name"]))
+                return 200, {"freigegeben": False, "fehlend": fehlend}
+            checks = daten.get("checks") or {}
+            for k in ("werkzeug_vollstaendig", "keine_losen_teile", "schutz_montiert", "gereinigt"):
+                if checks.get(k) is not True:
+                    raise Fehler(400, "Bitte alle Prüfpunkte bestätigen")
+            freigabe = text_feld(daten, "freigabe_von", 80)
+            bem = text_feld(daten, "bemerkung", 300, False)
+            con.execute("UPDATE eingriffe SET offen = 0, ende = ?, freigabe_von = ? WHERE id = ?", (jetzt, freigabe, e["id"]))
+            protokoll = (f"{e['grund']}. Eingriff {e['start']} bis {jetzt[11:]} Uhr. Werkzeug vollständig zurück "
+                         f"({len(werkzeug)} Positionen), keine losen Teile, Schutz montiert, gereinigt. "
+                         f"Freigegeben durch {freigabe}." + (f" Bemerkung: {bem}" if bem else ""))
+            con.execute("INSERT INTO historie (anlage_id, datum, art, text, wer) VALUES (?,?,?,?,?)",
+                        (a["id"], heute(), "Freigabe", protokoll, b["name"]))
+            return 200, {"freigegeben": True}
+
         if methode == "POST" and teile == ["stoerungen"]:
             a = anlage_holen(con, b, daten.get("anlage"))
             text = text_feld(daten, "text", 500)
@@ -331,7 +389,7 @@ def api(methode, pfad, daten, auth, ip):
             massnahme = text_feld(daten, "massnahme", 300)
             con.execute("UPDATE stoerungen SET offen = 0 WHERE id = ?", (sid,))
             con.execute("INSERT INTO historie (anlage_id, datum, art, text, wer) VALUES (?,?,?,?,?)",
-                        (s["anlage_id"], heute(), "Störung", f"{s['text']} – Behoben: {massnahme}", b["name"]))
+                        (s["anlage_id"], heute(), "Störung", f"{s['text']}. Behoben: {massnahme}", b["name"]))
             return 200, {"ok": True}
 
         if methode == "GET" and teile == ["team"]:
