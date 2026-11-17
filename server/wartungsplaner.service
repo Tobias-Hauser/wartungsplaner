@@ -1,0 +1,19 @@
+[Unit]
+Description=Wartungsplaner API (127.0.0.1:8093)
+After=network.target
+
+[Service]
+User=wartung
+Group=wartung
+WorkingDirectory=/opt/wartungsplaner
+Environment=WP_DB=/opt/wartungsplaner/daten/wartung.db
+ExecStart=/usr/bin/python3 /opt/wartungsplaner/server.py
+Restart=always
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/wartungsplaner/daten
+
+[Install]
+WantedBy=multi-user.target
