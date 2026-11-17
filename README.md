@@ -1,6 +1,6 @@
 # 🔧 Wartungsplaner mit QR-Codes
 
-Ein digitaler Wartungsplaner für Betriebe und Werkstätten – im Browser und auf dem Handy, **für das ganze Team**.
+Ein digitaler Wartungsplaner für Betriebe und Werkstätten. Läuft im Browser und auf dem Handy, **für das ganze Team**.
 
 **👉 Live:** https://tobias-hauser.github.io/wartungsplaner/
 („Demo ansehen“ funktioniert ohne Anmeldung)
@@ -19,12 +19,13 @@ In vielen Betrieben läuft die Wartungsplanung noch über Excel-Listen, Papier o
 
 Jede Anlage bekommt einen **QR-Aufkleber**. Wer ihn mit dem Handy scannt, sieht sofort:
 
-- ✅ **Status** – in Ordnung / bald fällig / überfällig (Ampelsystem)
+- ✅ **Status**: in Ordnung / bald fällig / überfällig (Ampelsystem)
 - 📋 **Wartungsumfang** als Checkliste
-- 🕓 **Historie** – alle Wartungen und Störungen mit Datum und Name
-- ⚠️ **Störung melden** – direkt an der Anlage, mit Priorität
+- 🕓 **Historie**: alle Wartungen, Störungen und Freigaben mit Datum und Name
+- ⚠️ **Störung melden** direkt an der Anlage, mit Priorität
+- 🔒 **Freigabe nach Instandhaltung** mit Werkzeugkontrolle
 
-Chef und Mitarbeiter sehen **dieselben Daten** – egal auf welchem Gerät.
+Chef und Mitarbeiter sehen **dieselben Daten**, egal auf welchem Gerät.
 
 ![Anlagen-Detail mit QR-Code](bilder/anlage.png)
 
@@ -38,7 +39,8 @@ Chef und Mitarbeiter sehen **dieselben Daten** – egal auf welchem Gerät.
 | Wartungsintervalle | Nächster Termin wird automatisch aus letzter Wartung + Intervall berechnet |
 | Checkliste | Wartung kann erst gespeichert werden, wenn alle Punkte abgehakt sind |
 | Störmeldungen | Melden, priorisieren und mit durchgeführter Maßnahme abschließen |
-| QR-Etiketten | Pro Anlage ein QR-Code zum Ausdrucken und Aufkleben – Scan führt direkt zur Anlage |
+| QR-Etiketten | Pro Anlage ein QR-Code zum Ausdrucken und Aufkleben, der Scan führt direkt zur Anlage |
+| **Freigabe nach Instandhaltung** | Vor dem Eingriff wird jedes Werkzeug und Teil erfasst, die Anlage ist gesperrt. Danach muss alles wieder abgehakt werden. Fehlt etwas, gibt es keine Freigabe und automatisch eine Störung mit hoher Priorität. Erst wenn alles vollständig ist, gibt die Produktion mit Namen frei. Schutz vor Fremdkörpern, wichtig für Lebensmittelbetriebe (HACCP / IFS Food) |
 | Anlagen verwalten | Anlegen und löschen (mit Sicherheitsabfrage) |
 | Demo-Modus | Ausprobieren ohne Anmeldung, Daten nur im eigenen Browser |
 
@@ -50,7 +52,7 @@ Handy / PC ──► Frontend (GitHub Pages)  ──►  API (eigener Linux-Serv
 ```
 
 **Frontend** (`index.html`, `app.js`, `style.css`)
-- Reines HTML, CSS und JavaScript – keine Frameworks, keine Installation
+- Reines HTML, CSS und JavaScript, keine Frameworks, keine Installation
 - QR-Codes mit [qrcodejs](https://github.com/davidshimjs/qrcodejs)
 
 **Backend** (`server/`)
@@ -76,5 +78,5 @@ Handy / PC ──► Frontend (GitHub Pages)  ──►  API (eigener Linux-Serv
 
 ---
 
-Entwickelt von **Tobias Hauser**, Mechatroniker (IHK) aus Freiburg – mit KI-Unterstützung.
+Entwickelt von **Tobias Hauser**, Mechatroniker (IHK) aus Freiburg, mit KI-Unterstützung.
 Idee aus der Praxis: Wartung und Instandhaltung technischer Anlagen.

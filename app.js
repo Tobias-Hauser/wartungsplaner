@@ -57,7 +57,7 @@ function demoDaten() {
     ],
     historie: [
       { anlage: 'A-003', datum: tageZurueck(30), art: 'Wartung', text: 'Wartung nach Checkliste, alles i. O.', wer: 'T. Hauser' },
-      { anlage: 'A-001', datum: tageZurueck(20), art: 'Störung', text: 'Motor sehr laut – Lager getauscht', wer: 'T. Hauser' },
+      { anlage: 'A-001', datum: tageZurueck(20), art: 'Störung', text: 'Motor sehr laut, Lager getauscht', wer: 'T. Hauser' },
     ],
     stoerungen: [
       { id: 1, anlage: 'A-002', datum: tageZurueck(2), text: 'Fehlermeldung Überstrom, Antrieb schaltet ab', prio: 'hoch', offen: true, von: 'Demo' },
@@ -98,10 +98,30 @@ const store = {
     if (modus === 'server') return api('POST', '/stoerungen', { anlage, text, prio });
     daten.stoerungen.push({ id: Date.now(), anlage, datum: heuteISO(), text, prio, offen: true, von: 'Demo' }); demoSpeichern();
   },
+  async eingriffStart(id, grund, werkzeug) {
+    if (modus === 'server') return api('POST', `/anlagen/${id}/eingriff`, { grund, werkzeug });
+    const a = daten.anlagen.find((x) => x.id === id);
+    const jetzt = new Date();
+    a.eingriff = { start: jetzt.toISOString().slice(0, 10) + ' ' + jetzt.toTimeString().slice(0, 5), grund, werkzeug, von: 'Demo' };
+    demoSpeichern();
+  },
+  async eingriffAbschluss(id, body) {
+    if (modus === 'server') return api('POST', `/anlagen/${id}/eingriff/abschluss`, body);
+    const a = daten.anlagen.find((x) => x.id === id), e = a.eingriff;
+    if (body.fehlend.length) {
+      daten.stoerungen.push({ id: Date.now(), anlage: id, datum: heuteISO(), prio: 'hoch', offen: true, von: 'Demo',
+        text: 'Nach Instandhaltung fehlt: ' + body.fehlend.join(', ') + '. Anlage NICHT freigeben, Suche einleiten (Fremdkörpergefahr).' });
+      demoSpeichern(); return { freigegeben: false };
+    }
+    const ende = new Date().toTimeString().slice(0, 5);
+    daten.historie.push({ anlage: id, datum: heuteISO(), art: 'Freigabe', wer: 'Demo',
+      text: `${e.grund}. Eingriff ${e.start} bis ${ende} Uhr. Werkzeug vollständig zurück (${e.werkzeug.length} Positionen), keine losen Teile, Schutz montiert, gereinigt. Freigegeben durch ${body.freigabe_von}.` + (body.bemerkung ? ' Bemerkung: ' + body.bemerkung : '') });
+    delete a.eingriff; demoSpeichern(); return { freigegeben: true };
+  },
   async behoben(sid, massnahme) {
     if (modus === 'server') return api('POST', `/stoerungen/${sid}/behoben`, { massnahme });
     const s = daten.stoerungen.find((x) => x.id === sid); s.offen = false;
-    daten.historie.push({ anlage: s.anlage, datum: heuteISO(), art: 'Störung', text: `${s.text} – Behoben: ${massnahme}`, wer: 'Demo' });
+    daten.historie.push({ anlage: s.anlage, datum: heuteISO(), art: 'Störung', text: `${s.text}. Behoben: ${massnahme}`, wer: 'Demo' });
     demoSpeichern();
   },
 };
@@ -170,7 +190,7 @@ function renderUebersicht() {
       <h3>${esc(a.name)} <span class="meta">· ${esc(a.id)}</span></h3>
       <span class="badge ${s}">${STATUS_TEXT[s]}</span>
       <div class="meta">${esc(a.ort)} · ${esc(a.typ)}</div>
-      ${st ? `<span class="badge stoer">${st} Störung${st > 1 ? 'en' : ''}</span>` : '<span></span>'}
+      ${a.eingriff ? '<span class="badge eingriff">In Instandhaltung</span>' : st ? `<span class="badge stoer">${st} Störung${st > 1 ? 'en' : ''}</span>` : '<span></span>'}
       <div class="meta">Nächste Wartung: ${fmt(naechsteWartung(a))} (${rText})</div>
     </div>`;
   }).join('') || `<div class="karte"><p>Noch keine Anlagen angelegt.</p><button class="primaer" onclick="location.hash='neu'">Erste Anlage anlegen</button></div>`;
@@ -198,8 +218,15 @@ function renderDetail(id) {
         </div>
         <div><div class="qr" id="qr"></div><div class="qr-label">${esc(a.name)} · ${esc(a.id)}</div></div>
       </div>
+      ${a.eingriff ? `<div class="eingriff-box">
+        <b>🔧 In Instandhaltung</b> seit ${esc(a.eingriff.start)} Uhr (${esc(a.eingriff.von)})<br>
+        Grund: ${esc(a.eingriff.grund)}<br>
+        Erfasstes Werkzeug/Material: ${a.eingriff.werkzeug.map(esc).join(', ')}
+        <div class="aktionen"><button class="primaer" id="btnAbschluss">Eingriff abschließen &amp; freigeben</button></div>
+      </div>` : ''}
       <div class="aktionen">
-        <button class="primaer" id="btnWartung">Wartung erledigt</button>
+        ${a.eingriff ? '' : '<button class="primaer" id="btnEingriff">Eingriff starten</button>'}
+        <button class="${a.eingriff ? 'primaer' : 'sekundaer'}" id="btnWartung">Wartung erledigt</button>
         <button class="warn" id="btnStoerung">Störung melden</button>
         <button class="sekundaer" id="btnDruck">QR-Etikett drucken</button>
         ${darfLoeschen() ? '<button class="sekundaer" id="btnLoeschen">Anlage löschen</button>' : ''}
@@ -221,7 +248,85 @@ function renderDetail(id) {
   $('btnWartung').onclick = () => formWartung(a);
   $('btnStoerung').onclick = () => formStoerung(a);
   if ($('btnLoeschen')) $('btnLoeschen').onclick = () => formLoeschen(a);
+  if ($('btnEingriff')) $('btnEingriff').onclick = () => formEingriffStart(a);
+  if ($('btnAbschluss')) $('btnAbschluss').onclick = () => formEingriffAbschluss(a);
   bindStoerButtons();
+}
+
+const WERKZEUG_VORSCHLAG = ['Schraubendreher-Set', 'Ratschenkasten', 'Maulschlüssel-Satz', 'Multimeter', 'Taschenlampe', 'Kabelbinder', 'Ersatzteil (Schrauben/Kleinteile)', 'Putztuch'];
+
+function formEingriffStart(a) {
+  $('formBereich').innerHTML = `
+    <form id="fe" class="formular">
+      <p class="meta">Vor dem Eingriff alles erfassen, was an die Anlage mitgenommen wird. Nach dem Eingriff muss jedes Teil wieder abgehakt werden, damit nichts in der Linie zurückbleibt.</p>
+      <label>Grund des Eingriffs<input name="grund" required maxlength="200" placeholder="z. B. Lager am Antrieb tauschen"></label>
+      <div class="chips">${WERKZEUG_VORSCHLAG.map((w) => `<button type="button" class="chip" data-w="${esc(w)}">+ ${esc(w)}</button>`).join('')}</div>
+      <label>Werkzeug und Material (eine Zeile pro Teil)<textarea name="werkzeug" rows="5" required placeholder="Ratschenkasten&#10;Multimeter&#10;2 Schrauben M8"></textarea></label>
+      <button class="primaer" type="submit">Eingriff starten und Anlage sperren</button>
+    </form>`;
+  const ta = document.querySelector('#fe textarea');
+  document.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
+    const liste = ta.value.split('\n').map((s) => s.trim()).filter(Boolean);
+    if (!liste.includes(c.dataset.w)) liste.push(c.dataset.w);
+    ta.value = liste.join('\n'); c.classList.add('gewaehlt');
+  });
+  $('fe').onsubmit = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const werkzeug = String(f.get('werkzeug')).split('\n').map((s) => s.trim()).filter(Boolean);
+    ausfuehren(() => store.eingriffStart(a.id, f.get('grund'), werkzeug));
+  };
+}
+
+function formEingriffAbschluss(a) {
+  const e = a.eingriff;
+  $('formBereich').innerHTML = `
+    <form id="fa" class="formular">
+      <h3 style="margin:0">1. Werkzeugkontrolle</h3>
+      <p class="meta">Jedes Teil abhaken, das wieder vollständig zurück ist. Fehlt etwas, wird die Anlage nicht freigegeben.</p>
+      <div class="check werkzeug-check">${e.werkzeug.map((w, i) => `<label><input type="checkbox" name="w" value="${i}"> ${esc(w)}</label>`).join('')}</div>
+      <h3 style="margin:8px 0 0">2. Zustand der Anlage</h3>
+      <div class="check">
+        <label><input type="checkbox" name="keine_losen_teile"> Keine losen Teile, Schrauben oder Reste in der Anlage</label>
+        <label><input type="checkbox" name="schutz_montiert"> Alle Schutzhauben und Abdeckungen wieder montiert</label>
+        <label><input type="checkbox" name="gereinigt"> Arbeitsbereich und Anlage gereinigt</label>
+      </div>
+      <h3 style="margin:8px 0 0">3. Freigabe durch die Produktion</h3>
+      <label>Name der Person, die freigibt<input name="freigabe_von" maxlength="80" placeholder="z. B. Schichtleitung"></label>
+      <label>Bemerkung (optional)<input name="bemerkung" maxlength="300" placeholder="z. B. Lager getauscht, Probelauf ok"></label>
+      <p class="fehler" id="abschlussHinweis" hidden></p>
+      <button class="primaer" type="submit" id="btnFreigabe">Anlage freigeben</button>
+    </form>`;
+  const form = $('fa');
+  const fehlend = () => e.werkzeug.filter((w, i) => !form.querySelector(`input[name=w][value="${i}"]`).checked);
+  const aktualisieren = () => {
+    const f = fehlend();
+    const hinweis = $('abschlussHinweis');
+    hinweis.hidden = !f.length;
+    hinweis.textContent = f.length ? `Fehlt noch: ${f.join(', ')}. Ohne vollständiges Werkzeug keine Freigabe.` : '';
+    $('btnFreigabe').textContent = f.length ? 'Fehlendes Teil melden (keine Freigabe)' : 'Anlage freigeben';
+    $('btnFreigabe').className = f.length ? 'warn' : 'primaer';
+  };
+  form.addEventListener('change', aktualisieren);
+  form.onsubmit = (ev) => {
+    ev.preventDefault();
+    const f = fehlend();
+    if (!f.length) {
+      for (const k of ['keine_losen_teile', 'schutz_montiert', 'gereinigt']) {
+        if (!form[k].checked) { alarm('Bitte alle Punkte unter „Zustand der Anlage“ bestätigen'); return; }
+      }
+      if (!form.freigabe_von.value.trim()) { alarm('Bitte den Namen der freigebenden Person eintragen'); return; }
+    }
+    const body = {
+      fehlend: f,
+      checks: { werkzeug_vollstaendig: !f.length, keine_losen_teile: form.keine_losen_teile.checked, schutz_montiert: form.schutz_montiert.checked, gereinigt: form.gereinigt.checked },
+      freigabe_von: form.freigabe_von.value.trim(), bemerkung: form.bemerkung.value.trim(),
+    };
+    ausfuehren(async () => {
+      const r = await store.eingriffAbschluss(a.id, body);
+      setTimeout(() => alarm(r && r.freigegeben ? 'Anlage freigegeben, Protokoll in der Historie gespeichert' : 'Störung angelegt: Teil fehlt, Anlage bleibt gesperrt'), 50);
+    });
+  };
 }
 
 function stoerKarte(s) {
@@ -341,7 +446,7 @@ document.querySelectorAll('[data-form]').forEach((form) => form.onsubmit = async
     form.reset();
     await start();
   } catch (err) {
-    $('authFehler').textContent = err.message === 'Failed to fetch' ? 'Server nicht erreichbar – bitte später erneut versuchen.' : err.message;
+    $('authFehler').textContent = err.message === 'Failed to fetch' ? 'Server nicht erreichbar. Bitte später erneut versuchen.' : err.message;
     $('authFehler').hidden = false;
   } finally { knopf.disabled = false; }
 });
@@ -357,7 +462,7 @@ function abmeldenLokal() { lsDel(TOKEN_KEY); modus = null; ich = null; kopfAktua
 
 $('codeKopieren').onclick = () => { navigator.clipboard?.writeText($('teamCode').textContent); alarm('Code kopiert'); };
 $('codeNeu').onclick = async () => {
-  try { const r = await api('POST', '/team/neuer-code'); $('teamCode').textContent = r.code; alarm('Neuer Code erzeugt – der alte gilt nicht mehr'); } catch (e) { alarm(e.message); }
+  try { const r = await api('POST', '/team/neuer-code'); $('teamCode').textContent = r.code; alarm('Neuer Code erzeugt. Der alte gilt nicht mehr.'); } catch (e) { alarm(e.message); }
 };
 
 // ---------- Routing ----------

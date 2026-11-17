@@ -88,3 +88,11 @@ button.gross { padding: 12px 18px; font-size: 1rem; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: #222; color: #fff; padding: 10px 16px; border-radius: 8px; opacity: 0; transition: .25s; pointer-events: none; z-index: 10; max-width: 90vw; }
 .toast.zeigen { opacity: 1; transform: translateX(-50%) translateY(0); }
 footer a { color: var(--akzent); }
+.badge.eingriff { background: #1f6fd1; }
+.eingriff-box { border: 2px solid #1f6fd1; border-radius: 10px; padding: 12px 14px; margin-top: 12px; line-height: 1.6; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--linie); background: var(--bg); color: var(--text); border-radius: 99px; padding: 5px 10px; font-size: .85rem; cursor: pointer; }
+.chip.gewaehlt { background: #1f6fd1; color: #fff; border-color: #1f6fd1; }
+.werkzeug-check label { padding: 6px 0; border-bottom: 1px solid var(--linie); }
+.formular .check label { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: .95rem; }
+.formular .check input[type=checkbox] { width: 20px; height: 20px; flex: none; accent-color: var(--akzent); }
