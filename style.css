@@ -1,3 +1,4 @@
+[hidden] { display: none !important; }
 :root {
   --bg: #f4f5f7; --karte: #fff; --text: #1d1d1f; --grau: #6b6f76; --linie: #e2e4e8;
   --akzent: #a32a0b; --ok: #1f8a4c; --bald: #c98a00; --faellig: #c62828;
@@ -69,3 +70,21 @@ footer { color: var(--grau); font-size: .85rem; padding-bottom: 30px; }
   header, nav, .aktionen, footer, .nicht-drucken { display: none !important; }
   body { background: #fff; }
 }
+
+/* ---- Login / Start ---- */
+.start { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; align-items: start; margin-top: 10px; }
+.start-text h2 { font-size: 1.5rem; margin-top: 0; }
+.vorteile { padding-left: 18px; line-height: 1.8; }
+.auth { padding: 18px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs button { flex: 1; border: 0; background: var(--bg); color: var(--text); padding: 9px 6px; border-radius: 8px; cursor: pointer; font-size: .88rem; }
+.tabs button.aktiv { background: var(--akzent); color: #fff; font-weight: 600; }
+.fehler { color: var(--faellig); font-weight: 600; }
+button.gross { padding: 12px 18px; font-size: 1rem; }
+.demo-hinweis { background: #fff4d6; color: #5c4400; font-size: .9rem; padding: 8px 0; }
+.code { font-size: 1.8rem; font-weight: 700; letter-spacing: 2px; font-family: ui-monospace, Consolas, monospace; margin: 4px 0 8px; }
+.wer { color: var(--grau); font-size: .85rem; }
+@media (max-width: 760px) { .start { grid-template-columns: 1fr; } }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); background: #222; color: #fff; padding: 10px 16px; border-radius: 8px; opacity: 0; transition: .25s; pointer-events: none; z-index: 10; max-width: 90vw; }
+.toast.zeigen { opacity: 1; transform: translateX(-50%) translateY(0); }
+footer a { color: var(--akzent); }

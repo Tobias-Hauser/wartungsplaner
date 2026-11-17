@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wartungsplaner</title>
-<meta name="description" content="Digitaler Wartungsplaner mit QR-Codes für Anlagen">
-<link rel="stylesheet" href="style.css?v=2">
+<meta name="description" content="Digitaler Wartungsplaner mit QR-Codes für Anlagen – fürs ganze Team">
+<link rel="stylesheet" href="style.css?v=3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
@@ -13,19 +13,70 @@
   <div class="wrap kopf">
     <div>
       <h1>Wartungsplaner</h1>
-      <p class="sub">Anlagen · Wartungsintervalle · Störmeldungen · QR-Codes</p>
+      <p class="sub" id="untertitel">Anlagen · Wartungsintervalle · Störmeldungen · QR-Codes</p>
     </div>
-    <nav>
+    <nav id="nav" hidden>
       <button data-view="uebersicht" class="aktiv">Übersicht</button>
       <button data-view="stoerungen">Störungen</button>
       <button data-view="neu">+ Anlage</button>
+      <button data-view="team" id="navTeam" hidden>Team</button>
+      <button id="abmelden">Abmelden</button>
     </nav>
   </div>
 </header>
 
+<div id="demoHinweis" class="demo-hinweis" hidden>
+  <div class="wrap">Demo-Modus: Die Daten werden nur in diesem Browser gespeichert. <button class="link" id="demoEnde">Demo beenden</button></div>
+</div>
+
 <main class="wrap">
+  <!-- Start: Anmelden / Registrieren / Beitreten -->
+  <section id="view-start" hidden>
+    <div class="start">
+      <div class="start-text">
+        <h2>Wartung im Griff – für das ganze Team</h2>
+        <p>Jede Anlage bekommt einen QR-Code. Scannen zeigt sofort, wann die nächste Wartung fällig ist, was zu tun ist und was zuletzt gemacht wurde. Störungen werden direkt an der Maschine gemeldet.</p>
+        <ul class="vorteile">
+          <li>Ampel-Übersicht: überfällig, bald fällig, in Ordnung</li>
+          <li>Wartung nach Checkliste abhaken</li>
+          <li>Störungen melden und mit Maßnahme abschließen</li>
+          <li>Chef und Mitarbeiter sehen dieselben Daten</li>
+        </ul>
+        <button class="sekundaer gross" id="demoStart">Demo ansehen – ohne Anmeldung</button>
+      </div>
+      <div class="karte auth">
+        <div class="tabs">
+          <button data-tab="login" class="aktiv">Anmelden</button>
+          <button data-tab="registrieren">Betrieb registrieren</button>
+          <button data-tab="beitreten">Team beitreten</button>
+        </div>
+        <form id="form-login" class="formular" data-form="login">
+          <label>E-Mail<input name="email" type="email" required autocomplete="email"></label>
+          <label>Passwort<input name="passwort" type="password" required autocomplete="current-password"></label>
+          <button class="primaer" type="submit">Anmelden</button>
+        </form>
+        <form id="form-registrieren" class="formular" data-form="registrieren" hidden>
+          <label>Firmenname<input name="firma" required placeholder="z. B. Müller Metallbau GmbH"></label>
+          <label>Dein Name<input name="name" required autocomplete="name"></label>
+          <label>E-Mail<input name="email" type="email" required autocomplete="email"></label>
+          <label>Passwort (mind. 8 Zeichen)<input name="passwort" type="password" minlength="8" required autocomplete="new-password"></label>
+          <button class="primaer" type="submit">Betrieb anlegen</button>
+          <p class="meta">Du wirst Chef des Betriebs und kannst danach dein Team einladen.</p>
+        </form>
+        <form id="form-beitreten" class="formular" data-form="beitreten" hidden>
+          <label>Einladungscode vom Chef<input name="code" required placeholder="z. B. MUELLE-4821" autocapitalize="characters"></label>
+          <label>Dein Name<input name="name" required autocomplete="name"></label>
+          <label>E-Mail<input name="email" type="email" required autocomplete="email"></label>
+          <label>Passwort (mind. 8 Zeichen)<input name="passwort" type="password" minlength="8" required autocomplete="new-password"></label>
+          <button class="primaer" type="submit">Beitreten</button>
+        </form>
+        <p class="fehler" id="authFehler" hidden></p>
+      </div>
+    </div>
+  </section>
+
   <!-- Übersicht -->
-  <section id="view-uebersicht">
+  <section id="view-uebersicht" hidden>
     <div class="kpis" id="kpis"></div>
     <div class="filter">
       <input id="suche" type="search" placeholder="Anlage oder Standort suchen …">
@@ -52,21 +103,37 @@
   <section id="view-neu" hidden>
     <h2>Neue Anlage anlegen</h2>
     <form id="formNeu" class="karte formular">
-      <label>Bezeichnung<input name="name" required placeholder="z. B. Förderband 3"></label>
-      <label>Standort<input name="ort" required placeholder="z. B. Halle 2, Linie A"></label>
-      <label>Typ<input name="typ" placeholder="z. B. Bandförderer"></label>
-      <label>Wartungsintervall (Tage)<input name="intervall" type="number" min="1" value="90" required></label>
+      <label>Bezeichnung<input name="name" required placeholder="z. B. Motor 3"></label>
+      <label>Standort<input name="ort" required placeholder="z. B. Halle 2"></label>
+      <label>Typ<input name="typ" placeholder="z. B. Drehstrommotor"></label>
+      <label>Wartungsintervall (Tage)<input name="intervall" type="number" min="1" max="3650" value="90" required></label>
       <label>Letzte Wartung<input name="letzte" type="date" required></label>
-      <label>Wartungsumfang (eine Zeile pro Punkt)<textarea name="checkliste" rows="4" placeholder="Antriebskette schmieren&#10;Gurtspannung prüfen&#10;Not-Aus testen"></textarea></label>
+      <label>Wartungsumfang (eine Zeile pro Punkt)<textarea name="checkliste" rows="4" placeholder="Lager auf Geräusche prüfen&#10;Klemmen nachziehen&#10;Not-Aus testen"></textarea></label>
       <button type="submit" class="primaer">Anlage speichern</button>
     </form>
+  </section>
+
+  <!-- Team (nur Chef) -->
+  <section id="view-team" hidden>
+    <h2>Team</h2>
+    <div class="karte">
+      <p>Einladungscode für deine Mitarbeiter:</p>
+      <p class="code" id="teamCode">–</p>
+      <p class="meta">Mitarbeiter öffnen den Wartungsplaner, wählen „Team beitreten“ und geben diesen Code ein.</p>
+      <div class="aktionen">
+        <button class="sekundaer" id="codeKopieren">Code kopieren</button>
+        <button class="sekundaer" id="codeNeu">Neuen Code erzeugen</button>
+      </div>
+    </div>
+    <h3>Mitglieder</h3>
+    <div class="karte"><ul class="historie" id="teamListe"></ul></div>
   </section>
 </main>
 
 <footer class="wrap">
-  <p>Demo-Daten werden lokal im Browser gespeichert. <button id="reset" class="link">Demo zurücksetzen</button></p>
+  <p id="fussText"></p>
 </footer>
 
-<script src="app.js?v=2"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

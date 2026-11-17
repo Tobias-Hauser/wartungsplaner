@@ -1,8 +1,9 @@
 # 🔧 Wartungsplaner mit QR-Codes
 
-Ein einfacher, digitaler Wartungsplaner für Betriebe und Werkstätten – ohne Server, ohne Installation, direkt im Browser und auf dem Handy.
+Ein digitaler Wartungsplaner für Betriebe und Werkstätten – im Browser und auf dem Handy, **für das ganze Team**.
 
-**👉 Live-Demo:** https://tobias-hauser.github.io/wartungsplaner/
+**👉 Live:** https://tobias-hauser.github.io/wartungsplaner/
+(„Demo ansehen“ funktioniert ohne Anmeldung)
 
 ![Übersicht](bilder/uebersicht.png)
 
@@ -23,41 +24,55 @@ Jede Anlage bekommt einen **QR-Aufkleber**. Wer ihn mit dem Handy scannt, sieht 
 - 🕓 **Historie** – alle Wartungen und Störungen mit Datum und Name
 - ⚠️ **Störung melden** – direkt an der Anlage, mit Priorität
 
+Chef und Mitarbeiter sehen **dieselben Daten** – egal auf welchem Gerät.
+
 ![Anlagen-Detail mit QR-Code](bilder/anlage.png)
 
 ## Funktionen
 
 | Funktion | Beschreibung |
 |---|---|
+| Betrieb & Team | Chef registriert den Betrieb und lädt Mitarbeiter per Einladungscode ein |
+| Rollen | Chef: alles inkl. Anlagen löschen und Team verwalten · Mitarbeiter: Wartungen und Störungen |
 | Übersicht mit Kennzahlen | Überfällige, bald fällige und offene Störungen auf einen Blick |
 | Wartungsintervalle | Nächster Termin wird automatisch aus letzter Wartung + Intervall berechnet |
 | Checkliste | Wartung kann erst gespeichert werden, wenn alle Punkte abgehakt sind |
 | Störmeldungen | Melden, priorisieren und mit durchgeführter Maßnahme abschließen |
-| QR-Etiketten | Pro Anlage ein QR-Code zum Ausdrucken und Aufkleben |
-| Anlagen verwalten | Neue Anlagen anlegen und nicht mehr benötigte löschen (mit Sicherheitsabfrage) |
-| Suche & Filter | Nach Anlage, Standort oder Status |
-| Mobil | Funktioniert auf Handy, Tablet und PC |
+| QR-Etiketten | Pro Anlage ein QR-Code zum Ausdrucken und Aufkleben – Scan führt direkt zur Anlage |
+| Anlagen verwalten | Anlegen und löschen (mit Sicherheitsabfrage) |
+| Demo-Modus | Ausprobieren ohne Anmeldung, Daten nur im eigenen Browser |
 
-## Technik
+## Aufbau
 
-- Reines **HTML, CSS und JavaScript** – keine Installation, kein Server nötig
-- Daten werden lokal im Browser gespeichert (`localStorage`)
+```
+Handy / PC ──► Frontend (GitHub Pages)  ──►  API (eigener Linux-Server, nginx + Python)  ──►  SQLite
+               HTML · CSS · JavaScript        Login · Rollen · Daten pro Betrieb
+```
+
+**Frontend** (`index.html`, `app.js`, `style.css`)
+- Reines HTML, CSS und JavaScript – keine Frameworks, keine Installation
 - QR-Codes mit [qrcodejs](https://github.com/davidshimjs/qrcodejs)
-- Gehostet über **GitHub Pages**
+
+**Backend** (`server/`)
+- Python-Standardbibliothek (kein Framework), SQLite-Datenbank
+- Passwörter mit PBKDF2-SHA256 gehasht, Anmeldung per Sitzungs-Token
+- Jeder Betrieb sieht nur seine eigenen Daten
+- Schutz gegen zu viele Login-Versuche, Eingaben werden geprüft
+- Läuft als eigener systemd-Dienst mit eingeschränkten Rechten hinter nginx (HTTPS)
 
 ## Ausprobieren
 
-1. Live-Demo öffnen (Link oben) – es sind Beispielanlagen hinterlegt
+1. Live-Link öffnen → **„Demo ansehen“**
 2. Eine Anlage anklicken → QR-Code mit dem Handy scannen
 3. „Störung melden“ oder „Wartung erledigt“ ausprobieren
-4. Über „Demo zurücksetzen“ ganz unten wieder auf die Beispieldaten zurück
+4. Für echten Einsatz: **„Betrieb registrieren“** und Kollegen mit dem Einladungscode einladen
 
 ## Ideen für die Weiterentwicklung
 
-- Gemeinsame Datenbank, damit das ganze Team dieselben Daten sieht
 - Erinnerung per E-Mail, wenn eine Wartung fällig wird
 - Auswertung: welche Anlage fällt am häufigsten aus (MTBF / MTTR)
 - Fotos zur Störmeldung anhängen
+- Export der Historie als PDF für Prüfungen
 
 ---
 
