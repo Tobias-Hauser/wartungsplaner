@@ -2,7 +2,7 @@
 
 Ein digitaler Wartungsplaner für Betriebe und Werkstätten. Läuft im Browser und auf dem Handy, **für das ganze Team**.
 
-**👉 Live:** https://tobias-hauser.github.io/wartungsplaner/
+**👉 Live:** https://mechatronik-dev.de/wartungsplaner/ (Teil von [MechatronikerDev](https://mechatronik-dev.de))
 („Demo ansehen“ funktioniert ohne Anmeldung)
 
 ![Übersicht](bilder/uebersicht.png)
