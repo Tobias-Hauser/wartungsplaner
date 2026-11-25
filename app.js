@@ -3,10 +3,15 @@
 //   • Server: Login, Daten liegen zentral – alle im Team sehen dasselbe
 //   • Demo:   ohne Anmeldung, Daten nur im eigenen Browser
 
-const API = ['localhost', '127.0.0.1'].includes(location.hostname)
-  ? 'http://localhost:8093/wartung-api'
-  : 'https://off-location.cloud/wartung-api';
-const TOKEN_KEY = 'wartungsplaner-token';
+// Unter mechatronik-dev.de gilt das gemeinsame Konto aus der oberen Leiste von MechatronikerDev
+const MD = /(^|\.)mechatronik-dev\.de$/.test(location.hostname) || location.port === '8766';
+const API = MD
+  ? (location.port === '8766' ? 'http://localhost:8093/wartung-api' : '/api')
+  : ['localhost', '127.0.0.1'].includes(location.hostname)
+    ? 'http://localhost:8093/wartung-api'
+    : 'https://off-location.cloud/wartung-api';
+const TOKEN_KEY = MD ? 'md-token' : 'wartungsplaner-token';
+const OBEN = (pfad) => { try { (window.top || window).location.href = '/' + pfad; } catch (e) { location.href = '/' + pfad; } };
 const DEMO_KEY = 'wartungsplaner-v2';
 const DEMO_AKTIV = 'wartungsplaner-demo';
 const BALD_TAGE = 14; // ab wie vielen Tagen vor Fälligkeit "bald fällig"
@@ -23,7 +28,9 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
-const darfLoeschen = () => modus === 'demo' || (ich && ich.rolle === 'chef');
+// Rechte: Demo darf alles, sonst entscheidet das Konto (wartung, stoerung, anlagen, loeschen, team)
+const darf = (recht) => modus === 'demo' || !!(ich && (ich.rechte || (ich.rolle === 'chef' ? [recht] : [])).includes(recht));
+const darfLoeschen = () => darf('loeschen');
 
 // ---------- Server-Anbindung ----------
 async function api(methode, pfad, body) {
@@ -157,10 +164,12 @@ function zeige(view) {
 function kopfAktualisieren() {
   const drin = !!modus;
   $('nav').hidden = !drin;
-  $('navTeam').hidden = !(ich && ich.rolle === 'chef');
+  $('navTeam').hidden = !(modus === 'server' && darf('team'));
+  document.querySelector('nav button[data-view="neu"]').hidden = !darf('anlagen');
+  $('abmelden').hidden = MD && modus === 'server';  // Abmelden geht über die obere Leiste
   $('demoHinweis').hidden = modus !== 'demo';
   $('abmelden').textContent = modus === 'demo' ? 'Demo beenden' : 'Abmelden';
-  $('untertitel').textContent = modus === 'server' ? `${ich.firma} · angemeldet als ${ich.name}` : 'Anlagen · Wartungsintervalle · Störmeldungen · QR-Codes';
+  $('untertitel').textContent = modus === 'server' ? `${ich.firma || 'Mein Betrieb'} · angemeldet als ${ich.name}${ich.position ? ' (' + ich.position + ')' : ''}` : 'Anlagen · Wartungsintervalle · Störmeldungen · QR-Codes';
   $('fussText').innerHTML = modus === 'demo'
     ? 'Demo-Daten werden lokal im Browser gespeichert. <button id="reset" class="link">Demo zurücksetzen</button>'
     : 'Wartungsplaner · Quellcode auf <a href="https://github.com/Tobias-Hauser/wartungsplaner">GitHub</a>';
@@ -193,7 +202,7 @@ function renderUebersicht() {
       ${a.eingriff ? '<span class="badge eingriff">In Instandhaltung</span>' : st ? `<span class="badge stoer">${st} Störung${st > 1 ? 'en' : ''}</span>` : '<span></span>'}
       <div class="meta">Nächste Wartung: ${fmt(naechsteWartung(a))} (${rText})</div>
     </div>`;
-  }).join('') || `<div class="karte"><p>Noch keine Anlagen angelegt.</p><button class="primaer" onclick="location.hash='neu'">Erste Anlage anlegen</button></div>`;
+  }).join('') || `<div class="karte"><p>Noch keine Anlagen angelegt.</p>${darf('anlagen') ? `<button class="primaer" onclick="location.hash='neu'">Erste Anlage anlegen</button>` : ''}</div>`;
 
   document.querySelectorAll('.anlage').forEach((el) => el.addEventListener('click', () => { location.hash = 'anlage=' + el.dataset.id; }));
 }
@@ -222,12 +231,12 @@ function renderDetail(id) {
         <b>🔧 In Instandhaltung</b> seit ${esc(a.eingriff.start)} Uhr (${esc(a.eingriff.von)})<br>
         Grund: ${esc(a.eingriff.grund)}<br>
         Erfasstes Werkzeug/Material: ${a.eingriff.werkzeug.map(esc).join(', ')}
-        <div class="aktionen"><button class="primaer" id="btnAbschluss">Eingriff abschließen &amp; freigeben</button></div>
+        ${darf('wartung') ? '<div class="aktionen"><button class="primaer" id="btnAbschluss">Eingriff abschließen &amp; freigeben</button></div>' : ''}
       </div>` : ''}
       <div class="aktionen">
-        ${a.eingriff ? '' : '<button class="primaer" id="btnEingriff">Eingriff starten</button>'}
-        <button class="${a.eingriff ? 'primaer' : 'sekundaer'}" id="btnWartung">Wartung erledigt</button>
-        <button class="warn" id="btnStoerung">Störung melden</button>
+        ${a.eingriff || !darf('wartung') ? '' : '<button class="primaer" id="btnEingriff">Eingriff starten</button>'}
+        ${darf('wartung') ? `<button class="${a.eingriff ? 'primaer' : 'sekundaer'}" id="btnWartung">Wartung erledigt</button>` : ''}
+        ${darf('stoerung') ? '<button class="warn" id="btnStoerung">Störung melden</button>' : ''}
         <button class="sekundaer" id="btnDruck">QR-Etikett drucken</button>
         ${darfLoeschen() ? '<button class="sekundaer" id="btnLoeschen">Anlage löschen</button>' : ''}
       </div>
@@ -245,8 +254,8 @@ function renderDetail(id) {
 
   $('zurueck').onclick = () => { location.hash = ''; };
   $('btnDruck').onclick = () => window.print();
-  $('btnWartung').onclick = () => formWartung(a);
-  $('btnStoerung').onclick = () => formStoerung(a);
+  if ($('btnWartung')) $('btnWartung').onclick = () => formWartung(a);
+  if ($('btnStoerung')) $('btnStoerung').onclick = () => formStoerung(a);
   if ($('btnLoeschen')) $('btnLoeschen').onclick = () => formLoeschen(a);
   if ($('btnEingriff')) $('btnEingriff').onclick = () => formEingriffStart(a);
   if ($('btnAbschluss')) $('btnAbschluss').onclick = () => formEingriffAbschluss(a);
@@ -335,7 +344,7 @@ function stoerKarte(s) {
     <b>${esc(a ? a.name : s.anlage)}</b> <span class="badge stoer">Prio ${esc(s.prio)}</span>
     <p>${esc(s.text)}</p>
     <p class="meta">Gemeldet am ${fmt(s.datum)}${s.von ? ' von ' + esc(s.von) : ''}</p>
-    <button class="sekundaer" data-stoer="${Number(s.id)}">Als behoben markieren</button>
+    ${darf('stoerung') ? `<button class="sekundaer" data-stoer="${Number(s.id)}">Als behoben markieren</button>` : ''}
   </div>`;
 }
 
@@ -471,14 +480,30 @@ function route() {
   const h = location.hash.slice(1);
   if (h.startsWith('anlage=')) { zeige('detail'); renderDetail(decodeURIComponent(h.slice(7))); }
   else if (h === 'stoerungen') { zeige('stoerungen'); renderStoerungen(); }
-  else if (h === 'neu') { zeige('neu'); }
+  else if (h === 'neu' && darf('anlagen')) { zeige('neu'); }
   else if (h === 'team' && ich && ich.rolle === 'chef') { zeige('team'); renderTeam(); }
   else { zeige('uebersicht'); renderUebersicht(); }
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('nav button[data-view]').forEach((b) => b.addEventListener('click', () => {
+  if (MD && b.dataset.view === 'team') { OBEN('#/team'); return; }
   location.hash = b.dataset.view === 'uebersicht' ? '' : b.dataset.view;
 }));
+
+// Unter mechatronik-dev.de: Anmelden und Registrieren über die obere Leiste
+if (MD) {
+  document.querySelector('.auth').innerHTML = `
+    <h3 style="margin-top:0">Mit Konto im Team arbeiten</h3>
+    <p class="meta">Mit einem kostenlosen Konto sehen alle im Team dieselben Anlagen, Wartungen und Störungen. Mitarbeiter lädst du per Link ein und legst fest, was sie dürfen.</p>
+    <div class="aktionen">
+      <button class="primaer" id="mdRegistrieren">Registrieren</button>
+      <button class="sekundaer" id="mdAnmelden">Anmelden</button>
+    </div>`;
+  $('mdRegistrieren').onclick = () => OBEN('#/registrieren');
+  $('mdAnmelden').onclick = () => OBEN('#/anmelden');
+  // An- oder Abmeldung in der oberen Leiste sofort übernehmen
+  window.addEventListener('storage', (e) => { if (e.key === TOKEN_KEY) start(); });
+}
 $('suche').addEventListener('input', renderUebersicht);
 $('filterStatus').addEventListener('change', renderUebersicht);
 document.querySelector('input[name=letzte]').value = heuteISO();
